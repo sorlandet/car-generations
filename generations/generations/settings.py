@@ -15,3 +15,17 @@ NEWSPIDER_MODULE = 'generations.spiders'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'generations (+http://www.yourdomain.com)'
+
+
+ITEM_PIPELINES = {
+    'generations.pipelines.BodyWriterPipeline': 300
+}
+
+DATABASE = {
+    'drivername': 'mysql',
+    'host': '',
+    'port': '3306',
+    'username': 'root',
+    'password': 'pswd1234',
+    'database': 'generations'
+}
