@@ -53,6 +53,7 @@ class AutoruSpider(scrapy.Spider):
         # yield Request('http://omsk.auto.ru/cars/chevrolet/malibu/', self.parse_item)
         # yield Request('http://omsk.auto.ru/cars/chevrolet/alero/', self.parse_item)
         # yield Request('http://omsk.auto.ru/cars/chevrolet/astra/', self.parse_item)
+        # yield Request('http://omsk.auto.ru/cars/buick/enclave/', self.parse_item)
 
     def parse_item(self, response):
         self.page_url = response.url
@@ -105,7 +106,12 @@ class AutoruSpider(scrapy.Spider):
         for tr in trs:
             td = tr.xpath("td[@class='showcase-list-cell showcase-list-cell_v2_releaseperiod']/text()").extract()
             for el in td:
+
                 for year in removeNonAsciiFromYears(el).split(' '):
+                    try:
+                        year = int(year)
+                    except ValueError:
+                        year = 9999
                     years.add(year)
 
         parts = self.page_url.split("/")
@@ -166,7 +172,7 @@ class AutoruSpider(scrapy.Spider):
             start, end = years
         except ValueError:
             start = years[0]
-            end = ''
+            end = '9999'
         # self.log('years = "%s"' % unicode(years))
         # self.log('start = "%s", end = "%s"' % (start, end))
         # item["link"] = hxs.select("div[@class='bodytext']/h2/a/@href").extract()
