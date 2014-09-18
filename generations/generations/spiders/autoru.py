@@ -30,10 +30,17 @@ class AutoruSpider(scrapy.Spider):
 
     def __init__(self, make=None, *args, **kwargs):
         super(AutoruSpider, self).__init__(*args, **kwargs)
-        self.start_urls = ['http://omsk.auto.ru/cars/%s/' % make]
-        self.output_path = 'output/%s/' % make
-        if not os.path.exists(self.output_path):
-            os.makedirs(self.output_path)
+        self.start_urls = []
+        with open('input.txt', 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                url = 'http://omsk.auto.ru%s' % line.strip()
+                self.start_urls.append(url)
+
+        # self.start_urls = ['http://omsk.auto.ru/cars/%s/' % make]
+        # self.output_path = 'output/%s/' % make
+        # if not os.path.exists(self.output_path):
+        #     os.makedirs(self.output_path)
 
     def parse(self, response):
         models = set()
@@ -70,9 +77,9 @@ class AutoruSpider(scrapy.Spider):
             model = None
 
         if model:
-            filename = self.output_path + model + '.html'
-            with open(filename, 'wb') as f:
-                f.write(response.body)
+            # filename = self.output_path + model + '.html'
+            # with open(filename, 'wb') as f:
+            #     f.write(response.body)
 
             hxs = Selector(response)
             for el in getattr(self, page_parse_method)(hxs):
