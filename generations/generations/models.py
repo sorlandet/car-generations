@@ -25,13 +25,12 @@ class Body(DeclarativeBase):
     """SqlAlchemy pages model"""
     __tablename__ = "body"
     __table_args__ = (
-        UniqueConstraint('body_name', name='_body_name_uc'),
+        UniqueConstraint('make', 'model', 'generation', 'body_name', name='_mmg_uc'),
         {'mysql_engine': 'MyISAM'}
     )
 
     id = Column(Integer, primary_key=True)
     page_url = Column('page_url', String(200), nullable=True)
-    page_title = Column('page_title', Unicode(200))
 
     make = Column('make', Unicode(75), nullable=True)
     model = Column('model', Unicode(75), nullable=True)

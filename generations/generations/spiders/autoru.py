@@ -23,6 +23,10 @@ def removeNonAsciiFromYears(s):
 class AutoruSpider(scrapy.Spider):
     name = "autoru"
     allowed_domains = ["omsk.auto.ru"]
+    page_url = None
+    car = None
+    make = None
+    model = None
 
     def __init__(self, make=None, *args, **kwargs):
         super(AutoruSpider, self).__init__(*args, **kwargs)
@@ -40,19 +44,26 @@ class AutoruSpider(scrapy.Spider):
         for link in models:
             yield Request(link, self.parse_item)
         # yield Request('http://omsk.auto.ru/cars/chevrolet/malibu/', self.parse_item)
+        # yield Request('http://omsk.auto.ru/cars/chevrolet/alero/', self.parse_item)
+        # yield Request('http://omsk.auto.ru/cars/chevrolet/astra/', self.parse_item)
 
     def parse_item(self, response):
         self.page_url = response.url
-        # self.log('page_url = "%s"' % self.page_url)
-        parts = response.url.split("/")
-        model = parts[-2]
 
+        if 'auth.auto.ru' in self.page_url:
+            return
+
+        # self.log('page_url = "%s"' % self.page_url)
+        parts = self.page_url.split("/")
+        model = parts[-2]
+        page_parse_method = 'process_generations_page'
         wrong = (
             'group-sedan', 'group-compactvan', 'group-coupe', 'group-hatchback_3d', 'group-hatchback_5d',
             'group-minivan', 'group-offroad_5d', 'group-pickup_2dr', 'group-sedan', 'group-wagon_5'
         )
 
         if model in wrong:
+            page_parse_method = 'process_body_page'
             model = parts[-3]
 
         if model in ('all', 'add'):
@@ -64,15 +75,58 @@ class AutoruSpider(scrapy.Spider):
                 f.write(response.body)
 
             hxs = Selector(response)
-            # self.log('start')
-            for el in self.process_page(hxs):
+            for el in getattr(self, page_parse_method)(hxs):
                 yield el
-            # self.log('finish')
 
-    def process_page(self, hxs):
-        title = hxs.xpath('//title')
-        self.page_title = title.extract()[0].replace('<title>', '').replace('</title>', '')
-        # self.log('page_title = "%s"' % self.page_title)
+    def process_body_page(self, hxs):
+        # <ul class="breadcrumbs-w">
+        #   <li class="breadcrumbs-i">
+        #     <a href="/cars/chevrolet/" class="breadcrumbs-l">Chevrolet</a>
+        #     <span class="breadcrumbs-level"></span>
+        #   </li>
+        #   <li class="breadcrumbs-i">
+        #     <span class="breadcrumbs-l breadcrumbs-l_text">Alero</span>
+        #     <span class="breadcrumbs-level"></span>
+        #   </li>
+        # </ul>
+        # /a[@class='breadcrumbs-l']/text()
+        make = hxs.xpath("//ul[@class='breadcrumbs-w']/li[@class='breadcrumbs-i']/a[@class='breadcrumbs-l']/text()").extract()[0]
+        model = hxs.xpath("//ul[@class='breadcrumbs-w']/li[@class='breadcrumbs-i']/span[@class='breadcrumbs-l breadcrumbs-l_text']/text()").extract()[0]
+
+        trs = hxs.xpath("//table[@class='showcase-list showcase-list_no-fixed']/tr")
+        years = set()
+        for tr in trs:
+            td = tr.xpath("td[@class='showcase-list-cell showcase-list-cell_v2_releaseperiod']/text()").extract()
+            for el in td:
+                for year in removeNonAsciiFromYears(el).split(' '):
+                    years.add(year)
+
+        parts = self.page_url.split("/")
+        body_name = parts[-2].replace('group-', '')
+
+        generation = ''
+        start = min(years)
+        end = max(years)
+        body_image = hxs.xpath("//div[@class='modifications-list-photo']/img[@class='modifications-list-img']/@src").extract()[0]
+
+
+        item = BodyItem()
+        item["page_url"] = self.page_url
+        item["make"] = make
+        item["model"] = model
+        item["generation"] = generation
+        item["start"] = start
+        item["end"] = end
+        item["body_name"] = body_name
+        item["body_image"] = body_image
+
+        return [item]
+
+    def process_generations_page(self, hxs):
+        self.make = hxs.xpath("//ul[@class='breadcrumbs-w']/li[@class='breadcrumbs-i']/a[@class='breadcrumbs-l']/text()").extract()[0]
+        self.model = hxs.xpath("//ul[@class='breadcrumbs-w']/li[@class='breadcrumbs-i']/span[@class='breadcrumbs-l breadcrumbs-l_text']/text()").extract()[0]
+        self.car = '%s %s' % (self.make, self.model)
+        self.log('car: %s' % self.car)
 
         generations = hxs.xpath("//div[@class='showcase-generation']")
         items = []
@@ -88,13 +142,18 @@ class AutoruSpider(scrapy.Spider):
 
     def process_generation(self, hxs):
         ret = []
-        car = self.page_title[10:].split(':')[0]
-        make, model = car.split(' ', 1)
-        value = hxs.xpath("h3[@class='showcase-generation-title']/a/text()").extract()[0].strip()
-        generation = value.replace(car, '').strip()
-        # self.log('value = "%s"' % value)
-        # self.log('generation = "%s"' % generation)
-        years = removeNonAsciiFromYears(hxs.xpath("h3[@class='showcase-generation-title']/a/span/text()").extract()[0]).strip().split('   ')
+        try:
+            value = hxs.xpath("h3[@class='showcase-generation-title']/a/text()").extract()[0].strip()
+            generation = value.replace(self.car, '').strip()
+            # self.log('value = "%s"' % value)
+            # self.log('generation = "%s"' % generation)
+            years = removeNonAsciiFromYears(hxs.xpath("h3[@class='showcase-generation-title']/a/span/text()").extract()[0]).strip().split('   ')
+        except IndexError:
+            value = hxs.xpath("h3[@class='showcase-generation-title']/text()").extract()[0].strip()
+            generation = value.replace(self.car, '').strip()
+            # self.log('value = "%s"' % value)
+            # self.log('generation = "%s"' % generation)
+            years = removeNonAsciiFromYears(hxs.xpath("h3[@class='showcase-generation-title']/span/text()").extract()[0]).strip().split('   ')
 
         try:
             start, end = years
@@ -109,16 +168,15 @@ class AutoruSpider(scrapy.Spider):
         bodies = hxs.xpath("ul[@class='clearfix']/li[@class='showcase-modify showcase-modify_hide-price']")
         for body in bodies:
 
-            body_name = body.xpath("strong/a/text()").extract()[0]
+            body_name = body.xpath("div[@class='showcase-modify-pic-w']/a[@class='showcase-link-item']/@href").extract()[0].split('/')[-2].replace('group-', '')
             body_image = body.xpath("div/a/img[@class='showcase-modify-pic']/@src").extract()[0]
             # self.log('body_name = "%s"' % body_name)
             # self.log('body_image = "%s"' % body_image)
 
             item = BodyItem()
             item["page_url"] = self.page_url
-            item["page_title"] = self.page_title
-            item["make"] = make
-            item["model"] = model
+            item["make"] = self.make
+            item["model"] = self.model
             item["generation"] = generation
             item["start"] = start
             item["end"] = end

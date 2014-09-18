@@ -11,7 +11,6 @@ import scrapy
 class BodyItem(scrapy.Item):
     # define the fields for your item here like:
     page_url = scrapy.Field()
-    page_title = scrapy.Field()
 
     make = scrapy.Field()
     model = scrapy.Field()

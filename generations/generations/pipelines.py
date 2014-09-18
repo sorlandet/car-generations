@@ -23,6 +23,7 @@ class BodyWriterPipeline(object):
         session = self.Session()
 
         body = Body(**item)
+        body.status = 0
 
         try:
             session.add(body)
