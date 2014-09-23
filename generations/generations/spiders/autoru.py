@@ -28,10 +28,10 @@ class AutoruSpider(scrapy.Spider):
     make = None
     model = None
 
-    def __init__(self, make=None, *args, **kwargs):
+    def __init__(self, filename=None, *args, **kwargs):
         super(AutoruSpider, self).__init__(*args, **kwargs)
         self.start_urls = []
-        with open('input.txt', 'r') as f:
+        with open(filename, 'r') as f:
             lines = f.readlines()
             for line in lines:
                 url = 'http://omsk.auto.ru%s' % line.strip()
@@ -44,7 +44,7 @@ class AutoruSpider(scrapy.Spider):
 
     def parse(self, response):
         models = set()
-        regex = re.compile("/cars/([\w.]+)/([\w.-]+)/")
+        regex = re.compile("/cars/([\w-]+)/([\w-]+)/")
         for el in regex.findall(response.body):
             models.add('http://omsk.auto.ru/cars/%s/%s/' % el)
 

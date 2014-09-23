@@ -1,0 +1,16 @@
+/cars/alfa-romeo/
+/cars/am-general/
+/cars/aston-martin/
+/cars/baltijas-dzips/
+/cars/bmw-alpina/
+/cars/de-tomaso/
+/cars/e-car/
+/cars/eagle-cars/
+/cars/great-wall/
+/cars/land-rover/
+/cars/liebao-motor/
+/cars/renault-samsung/
+/cars/rolls-royce/
+/cars/ssang-yong/
+/cars/xin-kai/
+/cars/e-mobil/
