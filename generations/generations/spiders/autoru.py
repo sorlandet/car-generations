@@ -44,7 +44,7 @@ class AutoruSpider(scrapy.Spider):
 
     def parse(self, response):
         models = set()
-        regex = re.compile("/cars/([\w.]+)/([\w.]+)/")
+        regex = re.compile("/cars/([\w.]+)/([\w.-]+)/")
         for el in regex.findall(response.body):
             models.add('http://omsk.auto.ru/cars/%s/%s/' % el)
 
